@@ -1,8 +1,7 @@
 import Lake
 open Lake DSL
 
-package «smp-proof-checker» where
-  name := "smp-proof-checker"
+package proof_collection where
 
-lean_lib «Proofs» where
-  -- Lean source files live under Proofs/
+@[default_target]
+lean_lib ProofCollection where

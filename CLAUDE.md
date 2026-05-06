@@ -35,8 +35,9 @@ smp-proof-checker/
 │   └── src/app/
 │       ├── page.tsx            Home
 │       ├── submit/page.tsx     Submit Proof (main feature)
-│       ├── collection/page.tsx Placeholder
-│       └── about/page.tsx      Placeholder
+│       ├── collection/page.tsx Collection (hardcoded MVP examples)
+│       ├── how-it-works/page.tsx How It Works (6-step pipeline)
+│       └── about/page.tsx      About
 ├── lean/                       Lean 4 Lake project
 │   ├── lakefile.lean
 │   ├── lean-toolchain          leanprover/lean4:v4.14.0
@@ -50,25 +51,43 @@ smp-proof-checker/
     └── check-proofs.yml        CI pipeline (check-lean + build-frontend jobs)
 ```
 
-## Current Frontend MVP
+## Current Frontend State
 
-The Submit Proof page (`/submit`) currently:
+### Pages
 
-- Accepts a theorem name, optional description, and Lean code.
+| Page | Route | Status |
+|---|---|---|
+| Home | `/` | Done — explains the checker, GitHub Actions gate, and proof collection |
+| Submit Proof | `/submit` | Done — full form with preview, file details, and checklist |
+| Collection | `/collection` | MVP — hardcoded example proofs, not yet live from repo |
+| How It Works | `/how-it-works` | Done — 6-step pipeline with vertical timeline |
+| About | `/about` | Done — stack overview and repo layout |
+
+### Submit Proof page (`/submit`)
+
+- Accepts theorem name, optional description, and Lean code.
 - Validates: theorem name required, only `[a-zA-Z0-9_]`, Lean code required.
-- Generates a suggested module name in PascalCase (e.g. `frontend_test` → `FrontendTest`).
+- Converts theorem name to PascalCase for the module name (e.g. `frontend_test` → `FrontendTest`).
 - Shows the exact file path: `lean/ProofCollection/Submissions/<Name>.lean`.
 - Shows the exact import line: `import ProofCollection.Submissions.<Name>`.
 - Renders a complete Lean file preview with the correct namespace wrapper.
-- Provides copy-to-clipboard buttons for the file contents, file path, and import line.
-- Shows a 7-step manual submission checklist.
+- Copy-to-clipboard buttons for the file contents, file path, and import line.
+- 7-step manual submission checklist.
+- Note that automatic GitHub PR creation is planned.
 
-The frontend does **not** push to GitHub automatically.
+### Collection page (`/collection`)
+
+- Currently shows 5 hardcoded example proofs (`add_zero`, `zero_add`, `add_self`,
+  `add_comm_example`, `add_assoc_example`).
+- Marked clearly as MVP examples.
+- Will be replaced with live data from the repo once the GitHub API is integrated.
+
+The frontend does **not** push to GitHub or create pull requests automatically.
 
 ## Manual Submission Workflow (current)
 
-1. User writes a Lean proof in the Submit Proof page.
-2. The frontend generates a Lean file preview with correct namespace and imports.
+1. User writes a Lean proof on the Submit Proof page.
+2. The frontend generates a Lean file preview with the correct namespace and imports.
 3. The user copies the generated file and creates it at the suggested path under
    `lean/ProofCollection/Submissions/`.
 4. The user adds the import line to `lean/ProofCollection.lean`.
@@ -76,8 +95,19 @@ The frontend does **not** push to GitHub automatically.
 6. The user opens a pull request.
 7. GitHub Actions runs `lake build` — a green check means the proof is accepted.
 
-## Future Work
+## Next Goal: Option B — Automatic GitHub PR Creation
 
-- **Automatic PR creation** via the GitHub API: the frontend will POST the generated file
-  contents to a backend endpoint that opens a pull request on behalf of the user.
-  GitHub Actions then acts as the proof-checker gate automatically.
+The next major milestone is removing the manual steps above. The plan:
+
+1. Add a **Next.js API route** (`/api/submit`) that receives the theorem name,
+   description, and Lean code from the frontend form.
+2. The API route uses the **GitHub API** (via a server-side token) to:
+   - Create a new branch.
+   - Commit the generated `.lean` file to `lean/ProofCollection/Submissions/`.
+   - Update `lean/ProofCollection.lean` to add the import line.
+   - Open a pull request against `main`.
+3. GitHub Actions then runs `lake build` automatically on the new PR.
+4. Branch protection accepts or rejects the proof — no manual steps needed.
+
+A `GITHUB_TOKEN` (fine-grained, scoped to this repo) will be stored as a Vercel
+environment variable and never exposed to the browser.

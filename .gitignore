@@ -1,3 +1,7 @@
+# Lean / Lake
+lean/.lake/
+lean/build/
+
 # Logs
 logs
 *.log

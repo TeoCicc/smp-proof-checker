@@ -61,5 +61,14 @@
     "importLine": "import ProofCollection.Basic",
     "leanCode": "theorem add_self (n : Nat) : n + n = 2 * n := by omega",
     "submittedVia": "manual"
+  },
+  {
+    "theoremName": "frontend_test",
+    "moduleName": "FrontendTest",
+    "description": "Test proof generated from the frontend.",
+    "filePath": "lean/ProofCollection/Submissions/FrontendTest.lean",
+    "importLine": "import ProofCollection.Submissions.FrontendTest",
+    "leanCode": "theorem auto_pr_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
+    "submittedVia": "automatic-pr"
   }
 ]

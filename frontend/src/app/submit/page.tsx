@@ -11,7 +11,6 @@ function validateTheoremName(name: string): string | null {
   return null;
 }
 
-/** "frontend_test" → "FrontendTest" */
 function toPascalCase(name: string): string {
   return name
     .split('_')
@@ -50,6 +49,17 @@ function useCopyState() {
   return { copied, copy };
 }
 
+// ── PR submission types ────────────────────────────────────────────────────
+
+type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface SubmitResult {
+  pullRequestUrl: string;
+  branchName: string;
+  filePath: string;
+  importLine: string;
+}
+
 // ── component ──────────────────────────────────────────────────────────────
 
 export default function SubmitPage() {
@@ -58,6 +68,10 @@ export default function SubmitPage() {
   const [leanCode, setLeanCode] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
   const [codeTouched, setCodeTouched] = useState(false);
+
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   const { copied, copy } = useCopyState();
 
@@ -78,13 +92,55 @@ export default function SubmitPage() {
     [leanCode]
   );
 
+  async function handleCreatePR() {
+    setNameTouched(true);
+    setCodeTouched(true);
+    if (!isValid) return;
+
+    setSubmitStatus('loading');
+    setSubmitResult(null);
+    setSubmitError('');
+
+    try {
+      const res = await fetch('/api/submit-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theoremName, description, leanCode }),
+      });
+
+      const data = (await res.json()) as { success?: boolean; error?: string } & Partial<SubmitResult>;
+
+      if (!res.ok || !data.success) {
+        setSubmitStatus('error');
+        setSubmitError(data.error ?? 'An unexpected error occurred. Please try again.');
+      } else {
+        setSubmitStatus('success');
+        setSubmitResult({
+          pullRequestUrl: data.pullRequestUrl ?? '',
+          branchName: data.branchName ?? '',
+          filePath: data.filePath ?? filePath,
+          importLine: data.importLine ?? importLine,
+        });
+      }
+    } catch {
+      setSubmitStatus('error');
+      setSubmitError('Network error. Check your connection and try again.');
+    }
+  }
+
+  function handleReset() {
+    setSubmitStatus('idle');
+    setSubmitResult(null);
+    setSubmitError('');
+  }
+
   return (
     <div>
       <h1>Submit a Proof</h1>
       <p>
-        Fill in the form to generate your Lean file, then follow the checklist below to
-        open a pull request. GitHub Actions will verify the proof with{' '}
-        <code>lake build</code>.
+        Fill in the form below, then click <strong>Create Pull Request</strong>. The app
+        will push the generated Lean file to a new branch and open a PR — GitHub Actions
+        will verify it with <code>lake build</code> automatically.
       </p>
 
       {/* ── Form ── */}
@@ -97,8 +153,9 @@ export default function SubmitPage() {
               type="text"
               value={theoremName}
               placeholder="e.g. add_comm_example"
-              onChange={(e) => setTheoremName(e.target.value)}
+              onChange={(e) => { setTheoremName(e.target.value); handleReset(); }}
               onBlur={() => setNameTouched(true)}
+              disabled={submitStatus === 'loading'}
             />
             {nameError && <span className="error">{nameError}</span>}
           </div>
@@ -111,6 +168,7 @@ export default function SubmitPage() {
               value={description}
               placeholder="Brief description of what this proof shows"
               onChange={(e) => setDescription(e.target.value)}
+              disabled={submitStatus === 'loading'}
             />
           </div>
 
@@ -121,8 +179,9 @@ export default function SubmitPage() {
               rows={10}
               value={leanCode}
               placeholder={`theorem ${theoremName.trim() || 'my_theorem'} : ... := by\n  omega`}
-              onChange={(e) => setLeanCode(e.target.value)}
+              onChange={(e) => { setLeanCode(e.target.value); handleReset(); }}
               onBlur={() => setCodeTouched(true)}
+              disabled={submitStatus === 'loading'}
             />
             {codeError && <span className="error">{codeError}</span>}
           </div>
@@ -159,7 +218,7 @@ export default function SubmitPage() {
           </div>
 
           <div className="info-row">
-            <span className="info-label">Import Line (add to ProofCollection.lean)</span>
+            <span className="info-label">Import Line (added to ProofCollection.lean)</span>
             <div className="copy-row">
               <code className="copy-code">{importLine}</code>
               <button
@@ -171,6 +230,69 @@ export default function SubmitPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Create PR button + result ── */}
+      <div className="card">
+        <h2 style={{ marginBottom: '0.75rem' }}>Create Pull Request</h2>
+        <p style={{ marginBottom: '1rem' }}>
+          The app will create a branch, commit the proof file, update{' '}
+          <code>ProofCollection.lean</code>, and open a pull request automatically.
+        </p>
+
+        <button
+          className="btn btn-primary"
+          onClick={handleCreatePR}
+          disabled={submitStatus === 'loading' || submitStatus === 'success'}
+          style={{ minWidth: '200px' }}
+        >
+          {submitStatus === 'loading' ? 'Creating pull request…' : 'Create Pull Request'}
+        </button>
+
+        {submitStatus === 'success' && submitResult && (
+          <div className="result result-success" style={{ marginTop: '1rem' }}>
+            <strong>Pull request created!</strong>
+            <p style={{ margin: '0.4rem 0 0.6rem' }}>
+              GitHub Actions is now running <code>lake build</code> on your proof.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <a
+                href={submitResult.pullRequestUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cta"
+                style={{ marginTop: 0 }}
+              >
+                View Pull Request →
+              </a>
+              <button className="btn btn-secondary" onClick={handleReset}>
+                Submit another proof
+              </button>
+            </div>
+            <div className="info-grid" style={{ marginTop: '1rem' }}>
+              <div className="info-row">
+                <span className="info-label">Branch</span>
+                <div className="copy-row">
+                  <code className="copy-code">{submitResult.branchName}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {submitStatus === 'error' && (
+          <div className="result result-error" style={{ marginTop: '1rem' }}>
+            <strong>Submission failed</strong>
+            <p style={{ margin: '0.35rem 0 0' }}>{submitError}</p>
+            <button
+              className="btn btn-secondary"
+              onClick={handleReset}
+              style={{ marginTop: '0.75rem' }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Generated file preview ── */}
@@ -194,36 +316,41 @@ export default function SubmitPage() {
         )}
       </div>
 
-      {/* ── Submission checklist ── */}
+      {/* ── Manual checklist (fallback) ── */}
       <div className="card" style={{ marginTop: '2rem' }}>
-        <h2 style={{ marginBottom: '1rem' }}>How to Submit</h2>
+        <h2 style={{ marginBottom: '0.4rem' }}>Manual Submission (fallback)</h2>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+          If automatic PR creation is unavailable, follow these steps instead.
+        </p>
         <ol className="checklist">
           <li>Copy the generated Lean file using the button above.</li>
           <li>
             Create the file at{' '}
-            <code>{nameIsValid ? filePath : 'lean/ProofCollection/Submissions/YourTheorem.lean'}</code>.
+            <code>
+              {nameIsValid ? filePath : 'lean/ProofCollection/Submissions/YourTheorem.lean'}
+            </code>
+            .
           </li>
           <li>Paste the copied contents into the file.</li>
           <li>
-            Open <code>lean/ProofCollection.lean</code> and add the import line:{' '}
-            <code>{nameIsValid ? importLine : 'import ProofCollection.Submissions.YourTheorem'}</code>.
+            Open <code>lean/ProofCollection.lean</code> and add:{' '}
+            <code>
+              {nameIsValid
+                ? importLine
+                : 'import ProofCollection.Submissions.YourTheorem'}
+            </code>
+            .
           </li>
           <li>
-            Run <code>lake build</code> inside <code>lean/</code> to verify the proof
-            compiles locally.
+            Run <code>lake build</code> inside <code>lean/</code> to verify locally.
           </li>
           <li>
             Commit both files and open a pull request against <code>main</code>.
           </li>
           <li>
-            GitHub Actions will run <code>lake build</code> automatically — a green check
-            means the proof is accepted.
+            GitHub Actions runs <code>lake build</code> — a green check means accepted.
           </li>
         </ol>
-        <div className="note" style={{ marginTop: '1.25rem', marginBottom: 0 }}>
-          <strong>Coming soon:</strong> automatic pull request creation through the GitHub
-          API — no manual file copying needed.
-        </div>
       </div>
     </div>
   );

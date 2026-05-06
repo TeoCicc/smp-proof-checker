@@ -2,3 +2,4 @@ import ProofCollection.Basic
 import ProofCollection.Submissions.Example
 import ProofCollection.Submissions.AutoPrTest
 import ProofCollection.Submissions.AutoIndexTest
+import ProofCollection.Submissions.FrontendTest

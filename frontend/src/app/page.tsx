@@ -5,61 +5,73 @@ export default function Home() {
     <div>
       <h1>SMP Proof Checker</h1>
       <p>
-        A tool for submitting and verifying Lean&nbsp;4 math proofs. Valid submissions are
-        reviewed and added to the proof collection.
+        Submit a Lean&nbsp;4 math proof and have it verified by the real Lean compiler.
+        Valid proofs are accepted into a shared collection.
       </p>
 
+      <div className="features">
+        <div className="feature">
+          <h3>Lean&nbsp;4 &amp; Lake</h3>
+          <p>
+            The actual proof checker. Your submission is compiled by Lean — if it builds,
+            the proof is mathematically valid.
+          </p>
+        </div>
+        <div className="feature">
+          <h3>GitHub Actions</h3>
+          <p>
+            Runs <code>lake build</code> automatically on every pull request. A failed
+            check blocks the merge; a passing check approves it.
+          </p>
+        </div>
+        <div className="feature">
+          <h3>Proof Collection</h3>
+          <p>
+            Accepted proofs live in <code>ProofCollection/Submissions/</code> and are
+            visible to everyone on the Collection page.
+          </p>
+        </div>
+      </div>
+
       <div className="card">
-        <h2>How it works</h2>
+        <h2>How submission works (current)</h2>
         <ul className="step-list">
           <li>
             <span className="step-num">1</span>
-            <span>
-              <strong>Write your proof</strong> — use the Submit Proof page to enter your
-              theorem name and Lean&nbsp;4 code.
-            </span>
+            <span>Write your theorem and proof in the Submit Proof page.</span>
           </li>
           <li>
             <span className="step-num">2</span>
             <span>
-              <strong>Generate the file</strong> — the form wraps your code in the correct
-              namespace and imports so it fits into the collection.
+              The app generates the correctly formatted Lean file, file path, and import
+              line.
             </span>
           </li>
           <li>
             <span className="step-num">3</span>
             <span>
-              <strong>Lake checks it</strong> — Lean&nbsp;4 and Lake are the actual proof
-              checkers. If your code compiles, the proof is valid.
+              Copy the file into <code>lean/ProofCollection/Submissions/</code> and add
+              the import to <code>ProofCollection.lean</code>.
             </span>
           </li>
           <li>
             <span className="step-num">4</span>
             <span>
-              <strong>Join the collection</strong> — accepted proofs are added to{' '}
-              <code>ProofCollection/Submissions/</code> and are visible to everyone.
+              Open a pull request. GitHub Actions runs <code>lake build</code> — a green
+              check means the proof is accepted.
             </span>
           </li>
         </ul>
       </div>
 
-      <div className="card">
-        <h2>About the checker</h2>
-        <p>
-          Lean&nbsp;4 is a functional programming language and interactive theorem prover.
-          Lake is its build system. Together they provide a rigorous, machine-verified
-          foundation for checking mathematical proofs — no hand-waving, no partial credit.
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          This project is part of a school assignment exploring proof verification
-          pipelines. The frontend helps format submissions; the real verification happens
-          inside the <code>lean/</code> directory.
-        </p>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <Link href="/submit" className="cta">
+          Submit a Proof
+        </Link>
+        <Link href="/how-it-works" className="cta cta-outline">
+          How It Works
+        </Link>
       </div>
-
-      <Link href="/submit" className="cta">
-        Submit a Proof →
-      </Link>
     </div>
   );
 }

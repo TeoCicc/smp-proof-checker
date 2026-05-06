@@ -220,6 +220,10 @@ export default function SubmitPage() {
             means the proof is accepted.
           </li>
         </ol>
+        <div className="note" style={{ marginTop: '1.25rem', marginBottom: 0 }}>
+          <strong>Coming soon:</strong> automatic pull request creation through the GitHub
+          API — no manual file copying needed.
+        </div>
       </div>
     </div>
   );

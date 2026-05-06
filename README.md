@@ -1,2 +1,2 @@
 # smp-proof-checker
-Takes in Lean proofs and evalutates logic
+This project checks submitted Lean proofs using GitHub Actions.

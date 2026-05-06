@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { ProofEntry } from '@/lib/proofs';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ function b64encode(text: string): string {
 }
 
 function b64decode(encoded: string): string {
-  // GitHub embeds newlines inside the base64 for readability — strip them first.
+  // GitHub embeds newlines inside base64 for readability — strip them first.
   return Buffer.from(encoded.replace(/\n/g, ''), 'base64').toString('utf8');
 }
 
@@ -160,9 +161,7 @@ export async function POST(request: Request): Promise<Response> {
     const existsRes = await gh(cfg, `/contents/${filePath}?ref=${base}`);
     if (existsRes.ok) {
       return NextResponse.json(
-        {
-          error: `A proof file named "${pascalName}.lean" already exists. Choose a different theorem name.`,
-        },
+        { error: `A proof file named "${pascalName}.lean" already exists. Choose a different theorem name.` },
         { status: 409 }
       );
     }
@@ -193,9 +192,9 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
     const rootData = await ghJson<{ content: string; sha: string }>(rootRes);
-    const currentContent = b64decode(rootData.content);
+    const currentRootContent = b64decode(rootData.content);
 
-    if (currentContent.includes(importLine)) {
+    if (currentRootContent.includes(importLine)) {
       return NextResponse.json(
         { error: `"${importLine}" is already present in ProofCollection.lean.` },
         { status: 409 }
@@ -203,30 +202,91 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Step F: append the import line and update ProofCollection.lean on the new branch
-    const updatedContent = `${currentContent.trimEnd()}\n${importLine}\n`;
-    const updateRes = await gh(cfg, '/contents/lean/ProofCollection.lean', {
+    const updatedRootContent = `${currentRootContent.trimEnd()}\n${importLine}\n`;
+    const updateRootRes = await gh(cfg, '/contents/lean/ProofCollection.lean', {
       method: 'PUT',
       body: JSON.stringify({
         message: `Import ${pascalName} into ProofCollection`,
-        content: b64encode(updatedContent),
+        content: b64encode(updatedRootContent),
         sha: rootData.sha,
         branch: branchName,
       }),
     });
-    if (!updateRes.ok) {
-      const err = await ghJson<{ message?: string }>(updateRes);
+    if (!updateRootRes.ok) {
+      const err = await ghJson<{ message?: string }>(updateRootRes);
       return NextResponse.json(
-        { error: `Could not update ProofCollection.lean: ${err.message ?? updateRes.statusText}` },
+        { error: `Could not update ProofCollection.lean: ${err.message ?? updateRootRes.statusText}` },
         { status: 502 }
       );
     }
 
-    // Step G: open the pull request
+    // Step G: read proofs/index.json from the base branch
+    // A 404 means the file doesn't exist yet — start with an empty array.
+    const indexRes = await gh(cfg, `/contents/proofs/index.json?ref=${base}`);
+    if (!indexRes.ok && indexRes.status !== 404) {
+      return NextResponse.json(
+        { error: 'Could not read proofs/index.json from the base branch.' },
+        { status: 502 }
+      );
+    }
+
+    let currentIndex: ProofEntry[] = [];
+    let indexSha: string | undefined;
+
+    if (indexRes.ok) {
+      const indexData = await ghJson<{ content: string; sha: string }>(indexRes);
+      currentIndex = JSON.parse(b64decode(indexData.content)) as ProofEntry[];
+      indexSha = indexData.sha;
+    }
+
+    // Step H: reject if theorem name already exists in the index
+    if (currentIndex.some((e) => e.theoremName === theoremName)) {
+      return NextResponse.json(
+        { error: `"${theoremName}" already exists in proofs/index.json.` },
+        { status: 409 }
+      );
+    }
+
+    // Step I: append the new entry and update proofs/index.json on the new branch
+    const newEntry: ProofEntry = {
+      theoremName,
+      moduleName: pascalName,
+      description,
+      filePath,
+      importLine,
+      leanCode,
+      submittedVia: 'automatic-pr',
+    };
+
+    const updatedIndex = [...currentIndex, newEntry];
+    const updatedIndexContent = JSON.stringify(updatedIndex, null, 2) + '\n';
+
+    const updateIndexBody: Record<string, unknown> = {
+      message: `Index proof: ${pascalName}`,
+      content: b64encode(updatedIndexContent),
+      branch: branchName,
+    };
+    if (indexSha) updateIndexBody.sha = indexSha;
+
+    const updateIndexRes = await gh(cfg, '/contents/proofs/index.json', {
+      method: 'PUT',
+      body: JSON.stringify(updateIndexBody),
+    });
+    if (!updateIndexRes.ok) {
+      const err = await ghJson<{ message?: string }>(updateIndexRes);
+      return NextResponse.json(
+        { error: `Could not update proofs/index.json: ${err.message ?? updateIndexRes.statusText}` },
+        { status: 502 }
+      );
+    }
+
+    // Step J: open the pull request
     const prBody = [
       description ? `**Description:** ${description}\n` : null,
       '### Files changed',
       `- \`${filePath}\` — new proof`,
       `- \`lean/ProofCollection.lean\` — added \`${importLine}\``,
+      `- \`proofs/index.json\` — indexed \`${theoremName}\``,
       '\n---',
       '_Submitted via SMP Proof Checker. GitHub Actions will verify this proof with `lake build`._',
     ]

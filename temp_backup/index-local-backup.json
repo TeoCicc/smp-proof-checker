@@ -1,0 +1,56 @@
+[
+  {
+    "theoremName": "add_zero",
+    "moduleName": "Basic",
+    "description": "Adding zero on the right leaves a natural number unchanged.",
+    "filePath": "lean/ProofCollection/Basic.lean",
+    "importLine": "import ProofCollection.Basic",
+    "leanCode": "theorem add_zero (n : Nat) : n + 0 = n := rfl",
+    "submittedVia": "manual"
+  },
+  {
+    "theoremName": "zero_add",
+    "moduleName": "Basic",
+    "description": "Adding zero on the left leaves a natural number unchanged.",
+    "filePath": "lean/ProofCollection/Basic.lean",
+    "importLine": "import ProofCollection.Basic",
+    "leanCode": "theorem zero_add (n : Nat) : 0 + n = n := by omega",
+    "submittedVia": "manual"
+  },
+  {
+    "theoremName": "add_self",
+    "moduleName": "Basic",
+    "description": "A number added to itself equals twice that number.",
+    "filePath": "lean/ProofCollection/Basic.lean",
+    "importLine": "import ProofCollection.Basic",
+    "leanCode": "theorem add_self (n : Nat) : n + n = 2 * n := by omega",
+    "submittedVia": "manual"
+  },
+  {
+    "theoremName": "add_comm_example",
+    "moduleName": "Example",
+    "description": "Natural number addition is commutative.",
+    "filePath": "lean/ProofCollection/Submissions/Example.lean",
+    "importLine": "import ProofCollection.Submissions.Example",
+    "leanCode": "theorem add_comm_example (a b : Nat) : a + b = b + a := by omega",
+    "submittedVia": "manual"
+  },
+  {
+    "theoremName": "add_assoc_example",
+    "moduleName": "Example",
+    "description": "Natural number addition is associative.",
+    "filePath": "lean/ProofCollection/Submissions/Example.lean",
+    "importLine": "import ProofCollection.Submissions.Example",
+    "leanCode": "theorem add_assoc_example (a b c : Nat) : (a + b) + c = a + (b + c) := by omega",
+    "submittedVia": "manual"
+  },
+  {
+    "theoremName": "auto_pr_test",
+    "moduleName": "AutoPrTest",
+    "description": "Test proof generated from the frontend.",
+    "filePath": "lean/ProofCollection/Submissions/AutoPrTest.lean",
+    "importLine": "import ProofCollection.Submissions.AutoPrTest",
+    "leanCode": "theorem auto_pr_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
+    "submittedVia": "automatic-pr"
+  }
+]

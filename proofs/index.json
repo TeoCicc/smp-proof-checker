@@ -1,0 +1,11 @@
+[
+  {
+    "theoremName": "auto_index_test",
+    "moduleName": "AutoIndexTest",
+    "description": "auto index Test proof generated from the frontend.",
+    "filePath": "lean/ProofCollection/Submissions/AutoIndexTest.lean",
+    "importLine": "import ProofCollection.Submissions.AutoIndexTest",
+    "leanCode": "theorem auto_index_test (n : Nat) : 0 + n = n := by\n  exact Nat.zero_add n",
+    "submittedVia": "automatic-pr"
+  }
+]

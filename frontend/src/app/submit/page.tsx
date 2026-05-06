@@ -251,11 +251,9 @@ export default function SubmitPage() {
 
         {submitStatus === 'success' && submitResult && (
           <div className="result result-success" style={{ marginTop: '1rem' }}>
-            <strong>Pull request created!</strong>
-            <p style={{ margin: '0.4rem 0 0.6rem' }}>
-              GitHub Actions is now running <code>lake build</code> on your proof.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <p className="result-heading">Pull request created</p>
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
               <a
                 href={submitResult.pullRequestUrl}
                 target="_blank"
@@ -269,26 +267,56 @@ export default function SubmitPage() {
                 Submit another proof
               </button>
             </div>
-            <div className="info-grid" style={{ marginTop: '1rem' }}>
-              <div className="info-row">
-                <span className="info-label">Branch</span>
-                <div className="copy-row">
-                  <code className="copy-code">{submitResult.branchName}</code>
+
+            <div className="result-section">
+              <p className="result-section-title">Submission details</p>
+              <div className="info-grid">
+                <div className="info-row">
+                  <span className="info-label">Branch</span>
+                  <div className="copy-row">
+                    <code className="copy-code">{submitResult.branchName}</code>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Lean file</span>
+                  <div className="copy-row">
+                    <code className="copy-code">{submitResult.filePath}</code>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Import added to ProofCollection.lean</span>
+                  <div className="copy-row">
+                    <code className="copy-code">{submitResult.importLine}</code>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="result-section">
+              <p className="result-section-title">What happens next</p>
+              <ul className="result-list">
+                <li>
+                  <strong>check-lean</strong> — runs <code>lake build</code> to verify
+                  your proof compiles in Lean&nbsp;4.
+                </li>
+                <li>
+                  <strong>build-frontend</strong> — verifies the Next.js app still builds
+                  with the updated index.
+                </li>
+                <li>
+                  Both checks must pass and a maintainer must approve the pull request
+                  before it can be merged. <strong>Proofs are not auto-merged.</strong>
+                </li>
+              </ul>
             </div>
           </div>
         )}
 
         {submitStatus === 'error' && (
           <div className="result result-error" style={{ marginTop: '1rem' }}>
-            <strong>Submission failed</strong>
-            <p style={{ margin: '0.35rem 0 0' }}>{submitError}</p>
-            <button
-              className="btn btn-secondary"
-              onClick={handleReset}
-              style={{ marginTop: '0.75rem' }}
-            >
+            <p className="result-heading">Submission failed</p>
+            <p className="result-error-msg">{submitError}</p>
+            <button className="btn btn-secondary" onClick={handleReset}>
               Try again
             </button>
           </div>

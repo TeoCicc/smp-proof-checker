@@ -144,84 +144,8 @@ export async function POST(request: Request): Promise<Response> {
     const { object } = await ghJson<{ object: { sha: string } }>(refRes);
     const baseSha = object.sha;
 
-    // Step B: create the new branch
-    const branchRes = await gh(cfg, '/git/refs', {
-      method: 'POST',
-      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
-    });
-    if (!branchRes.ok) {
-      const err = await ghJson<{ message?: string }>(branchRes);
-      return NextResponse.json(
-        { error: `Could not create branch: ${err.message ?? branchRes.statusText}` },
-        { status: 502 }
-      );
-    }
-
-    // Step C: check whether the proof file already exists on main
-    const existsRes = await gh(cfg, `/contents/${filePath}?ref=${base}`);
-    if (existsRes.ok) {
-      return NextResponse.json(
-        { error: `A proof file named "${pascalName}.lean" already exists. Choose a different theorem name.` },
-        { status: 409 }
-      );
-    }
-
-    // Step D: create the proof file on the new branch
-    const createRes = await gh(cfg, `/contents/${filePath}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        message: `Add proof: ${pascalName}`,
-        content: b64encode(fileContent),
-        branch: branchName,
-      }),
-    });
-    if (!createRes.ok) {
-      const err = await ghJson<{ message?: string }>(createRes);
-      return NextResponse.json(
-        { error: `Could not create proof file: ${err.message ?? createRes.statusText}` },
-        { status: 502 }
-      );
-    }
-
-    // Step E: read ProofCollection.lean from the base branch
-    const rootRes = await gh(cfg, `/contents/lean/ProofCollection.lean?ref=${base}`);
-    if (!rootRes.ok) {
-      return NextResponse.json(
-        { error: 'Could not read lean/ProofCollection.lean from the base branch.' },
-        { status: 502 }
-      );
-    }
-    const rootData = await ghJson<{ content: string; sha: string }>(rootRes);
-    const currentRootContent = b64decode(rootData.content);
-
-    if (currentRootContent.includes(importLine)) {
-      return NextResponse.json(
-        { error: `"${importLine}" is already present in ProofCollection.lean.` },
-        { status: 409 }
-      );
-    }
-
-    // Step F: append the import line and update ProofCollection.lean on the new branch
-    const updatedRootContent = `${currentRootContent.trimEnd()}\n${importLine}\n`;
-    const updateRootRes = await gh(cfg, '/contents/lean/ProofCollection.lean', {
-      method: 'PUT',
-      body: JSON.stringify({
-        message: `Import ${pascalName} into ProofCollection`,
-        content: b64encode(updatedRootContent),
-        sha: rootData.sha,
-        branch: branchName,
-      }),
-    });
-    if (!updateRootRes.ok) {
-      const err = await ghJson<{ message?: string }>(updateRootRes);
-      return NextResponse.json(
-        { error: `Could not update ProofCollection.lean: ${err.message ?? updateRootRes.statusText}` },
-        { status: 502 }
-      );
-    }
-
-    // Step G: read proofs/index.json from the base branch
-    // A 404 means the file doesn't exist yet — start with an empty array.
+    // Step B: read proofs/index.json from the base branch before creating anything.
+    // 404 = file doesn't exist yet; any other error is a real failure.
     const indexRes = await gh(cfg, `/contents/proofs/index.json?ref=${base}`);
     if (!indexRes.ok && indexRes.status !== 404) {
       return NextResponse.json(
@@ -239,11 +163,97 @@ export async function POST(request: Request): Promise<Response> {
       indexSha = indexData.sha;
     }
 
-    // Step H: reject if theorem name already exists in the index
+    // Step C: duplicate checks — must pass before any branch or file is created.
     if (currentIndex.some((e) => e.theoremName === theoremName)) {
       return NextResponse.json(
-        { error: `"${theoremName}" already exists in proofs/index.json.` },
+        { error: `A proof with theorem name "${theoremName}" already exists in the collection.` },
         { status: 409 }
+      );
+    }
+
+    if (currentIndex.some((e) => e.moduleName === pascalName)) {
+      return NextResponse.json(
+        {
+          error: `A proof with module name "${pascalName}" already exists in the collection. ` +
+            `This would create a conflicting file at ${filePath}.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Step D: create the new branch
+    const branchRes = await gh(cfg, '/git/refs', {
+      method: 'POST',
+      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: baseSha }),
+    });
+    if (!branchRes.ok) {
+      const err = await ghJson<{ message?: string }>(branchRes);
+      return NextResponse.json(
+        { error: `Could not create branch: ${err.message ?? branchRes.statusText}` },
+        { status: 502 }
+      );
+    }
+
+    // Step E: safety-net — confirm the proof file doesn't exist on the base branch.
+    const existsRes = await gh(cfg, `/contents/${filePath}?ref=${base}`);
+    if (existsRes.ok) {
+      return NextResponse.json(
+        { error: `A proof file named "${pascalName}.lean" already exists. Choose a different theorem name.` },
+        { status: 409 }
+      );
+    }
+
+    // Step F: create the proof file on the new branch
+    const createRes = await gh(cfg, `/contents/${filePath}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        message: `Add proof: ${pascalName}`,
+        content: b64encode(fileContent),
+        branch: branchName,
+      }),
+    });
+    if (!createRes.ok) {
+      const err = await ghJson<{ message?: string }>(createRes);
+      return NextResponse.json(
+        { error: `Could not create proof file: ${err.message ?? createRes.statusText}` },
+        { status: 502 }
+      );
+    }
+
+    // Step G: read ProofCollection.lean from the base branch
+    const rootRes = await gh(cfg, `/contents/lean/ProofCollection.lean?ref=${base}`);
+    if (!rootRes.ok) {
+      return NextResponse.json(
+        { error: 'Could not read lean/ProofCollection.lean from the base branch.' },
+        { status: 502 }
+      );
+    }
+    const rootData = await ghJson<{ content: string; sha: string }>(rootRes);
+    const currentRootContent = b64decode(rootData.content);
+
+    if (currentRootContent.includes(importLine)) {
+      return NextResponse.json(
+        { error: `"${importLine}" is already present in ProofCollection.lean.` },
+        { status: 409 }
+      );
+    }
+
+    // Step H: append the import line and update ProofCollection.lean on the new branch
+    const updatedRootContent = `${currentRootContent.trimEnd()}\n${importLine}\n`;
+    const updateRootRes = await gh(cfg, '/contents/lean/ProofCollection.lean', {
+      method: 'PUT',
+      body: JSON.stringify({
+        message: `Import ${pascalName} into ProofCollection`,
+        content: b64encode(updatedRootContent),
+        sha: rootData.sha,
+        branch: branchName,
+      }),
+    });
+    if (!updateRootRes.ok) {
+      const err = await ghJson<{ message?: string }>(updateRootRes);
+      return NextResponse.json(
+        { error: `Could not update ProofCollection.lean: ${err.message ?? updateRootRes.statusText}` },
+        { status: 502 }
       );
     }
 

@@ -3,3 +3,4 @@ import ProofCollection.Submissions.Example
 import ProofCollection.Submissions.AutoPrTest
 import ProofCollection.Submissions.AutoIndexTest
 import ProofCollection.Submissions.VercelTest
+import ProofCollection.Submissions.VercelTestAutomerge

@@ -70,5 +70,14 @@
     "importLine": "import ProofCollection.Submissions.VercelTest",
     "leanCode": "theorem vercel_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
     "submittedVia": "automatic-pr"
+  },
+  {
+    "theoremName": "vercel_test_automerge",
+    "moduleName": "VercelTestAutomerge",
+    "description": "Testing to see if proof gets aproved and then automerged for PR through front end hosting service Vercel",
+    "filePath": "lean/ProofCollection/Submissions/VercelTestAutomerge.lean",
+    "importLine": "import ProofCollection.Submissions.VercelTestAutomerge",
+    "leanCode": "theorem vercel_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
+    "submittedVia": "automatic-pr"
   }
 ]

@@ -70,5 +70,14 @@
     "importLine": "import ProofCollection.Submissions.VercelTest",
     "leanCode": "theorem vercel_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
     "submittedVia": "automatic-pr"
+  },
+  {
+    "theoremName": "vercel_final_test",
+    "moduleName": "VercelFinalTest",
+    "description": "Vercel frontend → GitHub PR → Lean check → Vercel/GitHub checks → merge/auto-merge",
+    "filePath": "lean/ProofCollection/Submissions/VercelFinalTest.lean",
+    "importLine": "import ProofCollection.Submissions.VercelFinalTest",
+    "leanCode": "theorem vercel_final_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
+    "submittedVia": "automatic-pr"
   }
 ]

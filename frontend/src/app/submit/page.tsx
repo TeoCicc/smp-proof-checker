@@ -58,6 +58,7 @@ interface SubmitResult {
   branchName: string;
   filePath: string;
   importLine: string;
+  autoMergeEnabled: boolean;
 }
 
 // ── component ──────────────────────────────────────────────────────────────
@@ -108,7 +109,7 @@ export default function SubmitPage() {
         body: JSON.stringify({ theoremName, description, leanCode }),
       });
 
-      const data = (await res.json()) as { success?: boolean; error?: string } & Partial<SubmitResult>;
+      const data = (await res.json()) as { success?: boolean; error?: string; autoMergeEnabled?: boolean } & Partial<SubmitResult>;
 
       if (!res.ok || !data.success) {
         setSubmitStatus('error');
@@ -120,6 +121,7 @@ export default function SubmitPage() {
           branchName: data.branchName ?? '',
           filePath: data.filePath ?? filePath,
           importLine: data.importLine ?? importLine,
+          autoMergeEnabled: data.autoMergeEnabled ?? false,
         });
       }
     } catch {
@@ -305,9 +307,20 @@ export default function SubmitPage() {
                 </li>
                 <li>
                   Both checks must pass and a maintainer must approve the pull request
-                  before it can be merged. <strong>Proofs are not auto-merged.</strong>
+                  before it can be merged.
                 </li>
               </ul>
+              {submitResult.autoMergeEnabled ? (
+                <div className="note" style={{ marginTop: '0.85rem', marginBottom: 0 }}>
+                  <strong>Auto-merge enabled.</strong> The PR will merge automatically
+                  once all checks pass and required approvals are met.
+                </div>
+              ) : (
+                <div className="note note-warning" style={{ marginTop: '0.85rem', marginBottom: 0 }}>
+                  <strong>Auto-merge could not be enabled.</strong> A maintainer must
+                  approve and merge this PR manually after checks pass.
+                </div>
+              )}
             </div>
           </div>
         )}

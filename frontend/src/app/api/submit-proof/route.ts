@@ -92,6 +92,41 @@ function b64decode(encoded: string): string {
   return Buffer.from(encoded.replace(/\n/g, ''), 'base64').toString('utf8');
 }
 
+// ── Auto-merge via GraphQL ─────────────────────────────────────────────────
+
+async function enableAutoMerge(cfg: GitHubConfig, pullRequestNodeId: string): Promise<boolean> {
+  const mutation = `
+    mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+      enablePullRequestAutoMerge(input: {
+        pullRequestId: $pullRequestId
+        mergeMethod: $mergeMethod
+      }) {
+        pullRequest {
+          autoMergeRequest { enabledAt }
+        }
+      }
+    }
+  `;
+  try {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${cfg.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: mutation,
+        variables: { pullRequestId: pullRequestNodeId, mergeMethod: 'MERGE' },
+      }),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { errors?: unknown[] };
+    return !data.errors?.length;
+  } catch {
+    return false;
+  }
+}
+
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(request: Request): Promise<Response> {
@@ -319,7 +354,10 @@ export async function POST(request: Request): Promise<Response> {
         { status: 502 }
       );
     }
-    const prData = await ghJson<{ html_url: string; number: number }>(prRes);
+    const prData = await ghJson<{ html_url: string; number: number; node_id: string }>(prRes);
+
+    // Attempt to enable auto-merge. Failure is non-fatal — return a warning instead.
+    const autoMergeEnabled = await enableAutoMerge(cfg, prData.node_id);
 
     return NextResponse.json({
       success: true,
@@ -327,6 +365,7 @@ export async function POST(request: Request): Promise<Response> {
       branchName,
       filePath,
       importLine,
+      autoMergeEnabled,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

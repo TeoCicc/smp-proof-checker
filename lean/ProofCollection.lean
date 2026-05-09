@@ -4,3 +4,4 @@ import ProofCollection.Submissions.AutoPrTest
 import ProofCollection.Submissions.AutoIndexTest
 import ProofCollection.Submissions.VercelTest
 import ProofCollection.Submissions.VercelFinalTest
+import ProofCollection.Submissions.SeedAddRearrange

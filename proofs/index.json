@@ -79,5 +79,14 @@
     "importLine": "import ProofCollection.Submissions.VercelFinalTest",
     "leanCode": "theorem vercel_final_test (n : Nat) : n + 0 = n := by\n  exact Nat.add_zero n",
     "submittedVia": "automatic-pr"
+  },
+  {
+    "theoremName": "seed_add_rearrange",
+    "moduleName": "SeedAddRearrange",
+    "description": "A seed proof showing that natural number addition can be rearranged using commutativity.",
+    "filePath": "lean/ProofCollection/Submissions/SeedAddRearrange.lean",
+    "importLine": "import ProofCollection.Submissions.SeedAddRearrange",
+    "leanCode": "theorem seed_add_rearrange (a b c : Nat) : (a + b) + c = c + (b + a) := by\n  calc\n    (a + b) + c = c + (a + b) := by\n      rw [Nat.add_comm]\n    _ = c + (b + a) := by\n      rw [Nat.add_comm a b]",
+    "submittedVia": "automatic-pr"
   }
 ]
